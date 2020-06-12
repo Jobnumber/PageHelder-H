@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd">
+<!--配置spring创建容器要扫描的包-->
+<context:component-scan base-package="com.pageHelder">
+    <!--不扫描Controller注解的类-->
+    <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+</context:component-scan>
+
+<!--Spring整合Mybatis-->
+<!--配置连接池-->
+<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+    <property name="driverClass" value="com.mysql.cj.jdbc.Driver"></property>
+    <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/ssmidea?serverTimezone=UTC"></property>
+    <property name="user" value="root"></property>
+    <property name="password" value="010126"></property>
+</bean>
+<!--SqlSessionFactory-->
+<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+    <property name="dataSource" ref="dataSource"></property>
+    <property name="mapperLocations" value="classpath:com/pageHelder/dao/*.xml"/>
+    <!--给实体类取别名-->
+    <property name="typeAliasesPackage" value="com.pageHelder.domain"/>
+
+
+    <property name="plugins">
+        <array>
+            <bean class="com.github.pagehelper.PageHelper">
+                <property name="properties">
+                    <value>
+                        helperDialect=mysql
+                        <!--分页合理化参数，设置为true时，pageNum<=0时会查询第一页,pageNum>pages(超过总数时),会查询最后一页。-->
+                        reasonable=true
+                    </value>
+                </property>
+            </bean>
+        </array>
+    </property>
+
+
+</bean>
+<!--配置接口所在包-->
+<bean id="mapperScanner" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+    <property name="basePackage" value="com.pageHelder.dao"></property>
+</bean>
+
+<!--配置Spring框架的声明式事务管理-->
+<!--配置事务管理器-->
+<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <property name="dataSource" ref="dataSource"></property>
+</bean>
+<!--事务通知-->
+<tx:advice id="txAdvice" transaction-manager="transactionManager">
+    <tx:attributes>
+        <tx:method name="find*" read-only="true"/>
+        <tx:method name="*" isolation="DEFAULT"/>
+    </tx:attributes>
+</tx:advice>
+<!--AOP增强-->
+<aop:config>
+    <aop:advisor advice-ref="txAdvice" pointcut="execution(* com.pageHelder.service.impl.*ServiceImpl.*(..))"/>
+</aop:config>
+</beans>
